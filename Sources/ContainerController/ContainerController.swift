@@ -106,6 +106,8 @@ open class ContainerController: NSObject {
         return width
     }
     
+    public var isRotateAllowed: Bool = false
+    
     // MARK: - Positions Move
     
     private var positionTop: CGFloat {
@@ -210,6 +212,8 @@ open class ContainerController: NSObject {
     // MARK: - Rotated
     
     @objc func rotated() {
+        
+        guard isRotateAllowed else { return }
         
         if !UIDevice.current.orientation.isRotateAllowed { return }
         
