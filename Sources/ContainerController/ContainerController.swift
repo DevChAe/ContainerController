@@ -82,7 +82,11 @@ open class ContainerController: NSObject {
     }
     
     private var isPortrait: Bool {
-        return ContainerDevice.isPortrait
+        if isOnlyPortrait {
+            return isOnlyPortrait
+        } else {
+            return ContainerDevice.isPortrait
+        }
     }
     
     private var deviceHeight: CGFloat {
@@ -107,6 +111,7 @@ open class ContainerController: NSObject {
     }
     
     public var isRotateAllowed: Bool = false
+    public var isOnlyPortrait: Bool = true
     
     // MARK: - Positions Move
     
