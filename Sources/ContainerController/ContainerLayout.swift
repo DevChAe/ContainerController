@@ -59,6 +59,16 @@ open class ContainerLayout {
     public var movingEnabled: Bool = true
     
     /**
+     Bottom Spring Enable
+     */
+    public var bottomSpringEnable: Bool = true
+    
+    /**
+     Bottom Bounce Enable
+     */
+    public var bottomBounceEnable: Bool = true
+    
+    /**
      This is parameters for control footerView.
      Padding-top from containerView, if headerView is added, then its + height is summed.
     */

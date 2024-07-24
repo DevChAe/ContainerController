@@ -250,6 +250,14 @@ open class ContainerController: NSObject {
         panGesture?.isEnabled = movingEnabled
     }
     
+    public func set(bottomSpringEnable: Bool) {
+        layout.bottomSpringEnable = bottomSpringEnable
+    }
+    
+    public func set(bottomBounceEnable: Bool) {
+        layout.bottomBounceEnable = bottomBounceEnable
+    }
+    
     public func set(trackingPosition: Bool) {
         layout.trackingPosition = trackingPosition
     }
@@ -494,6 +502,11 @@ open class ContainerController: NSObject {
             let type: ContainerMoveType = moveType
             let from: ContainerFromType = .pan
             let animation = false
+            
+            if !layout.bottomBounceEnable, position > positionBottom {
+                transform.ty = positionBottom
+                position = positionBottom
+            }
             
             changeView(transform: transform)
             shadowLevelAlpha(position: position, animation: false)
@@ -1091,20 +1104,33 @@ open class ContainerController: NSObject {
             displayLink?.add(to: .main, forMode: .default)
         }
         
-        UIView.animate( withDuration: TimeInterval(duration),
-                        delay: 0.0,
-                        usingSpringWithDamping: damping,
-                        initialSpringVelocity: velocity,
-                        options: [ .allowUserInteraction ],
-                        animations: animation,
-                        completion: { _ in
-                            
-                            if let displayLink = displayLink {
-                                displayLink.invalidate()
-                            }
-                            completion?()
-        })
-        
+        if layout.bottomSpringEnable {
+            UIView.animate( withDuration: TimeInterval(duration),
+                            delay: 0.0,
+                            usingSpringWithDamping: damping,
+                            initialSpringVelocity: velocity,
+                            options: [ .allowUserInteraction ],
+                            animations: animation,
+                            completion: { _ in
+                                
+                                if let displayLink = displayLink {
+                                    displayLink.invalidate()
+                                }
+                                completion?()
+            })
+        } else {
+            UIView.animate( withDuration: TimeInterval(0.2),
+                            delay: 0.0,
+                            options: [ .curveEaseOut ],
+                            animations: animation,
+                            completion: { _ in
+                                
+                                if let displayLink = displayLink {
+                                    displayLink.invalidate()
+                                }
+                                completion?()
+            })
+        }
     }
 }
 
@@ -1269,6 +1295,8 @@ extension ContainerController: UIScrollViewDelegate {
             
             if scrollTransform.ty < top {
                 scrollTransform.ty = top
+            } else if !layout.bottomBounceEnable, scrollTransform.ty > positionBottom {
+                scrollTransform.ty = positionBottom
             }
             
             if scrollBegin {
@@ -1317,6 +1345,8 @@ extension ContainerController: UIScrollViewDelegate {
                     
                     if scrollTransform.ty < top {
                         scrollTransform.ty = top
+                    } else if !layout.bottomBounceEnable, scrollTransform.ty > positionBottom {
+                        scrollTransform.ty = positionBottom
                     }
                     
                     let position = scrollTransform.ty
