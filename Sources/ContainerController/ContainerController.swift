@@ -802,6 +802,7 @@ open class ContainerController: NSObject {
                      type: ContainerMoveType,
                      velocity: CGFloat = 0.0,
                      from: ContainerFromType,
+                     shadowCheck: Bool = true,
                      completion: (() -> Void)? = nil) {
         
         if layout.movingEnabled {
@@ -816,7 +817,9 @@ open class ContainerController: NSObject {
         let oldMove = moveType
         moveType = type
         
-        shadowLevelAlpha(position: position, animation: true)
+        if shadowCheck {
+            shadowLevelAlpha(position: position, animation: true)
+        }
         
         let transform = CGAffineTransform(translationX: 0, y: position)
         
