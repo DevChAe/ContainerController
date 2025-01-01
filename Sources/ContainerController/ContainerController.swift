@@ -763,6 +763,7 @@ open class ContainerController: NSObject {
                      animation: Bool = true,
                      velocity: CGFloat = 0.0,
                      from: ContainerFromType = .custom,
+                     shadowCheck: Bool = true,
                      completion: (() -> Void)? = nil) {
         
         var position = positionMoveFrom(type: type)
@@ -775,6 +776,7 @@ open class ContainerController: NSObject {
              type: type,
              velocity: velocity,
              from: from,
+             shadowCheck: shadowCheck,
              completion: completion)
     }
     
