@@ -245,22 +245,30 @@ open class ContainerController: NSObject {
         
         let currentOrientation = UIDevice.current.orientation
         
-        // 1. 유효한 방향(Portrait, LandscapeLeft, LandscapeRight, Pad의 UpsideDown 등) 체크
         guard currentOrientation.isRotateAllowed else { return }
         
-        // 2. ContainerDevice.orientation 대신 UIDevice.current.orientation으로 직접 비교
         if currentOrientation == lastDeviceOrientation { return }
         lastDeviceOrientation = currentOrientation
         oldOrientation = ContainerDevice.orientation
         
-        shadowHiddenCheck()
-        
-        delegate?.containerControllerRotation?(self)
-        
-        calculationView()
-        calculationScrollViewHeight(from: .rotation)
-        
-        move(type: moveType, from: .rotation, shadowCheck: false)
+        // 💡 핵심: LandscapeLeft <-> LandscapeRight 전환 시 Safe Area 및 Frame 배치가
+        // iOS 시스템 트랜지션에 의해 완전히 끝난 후 calculationView를 실행하도록 1프레임 비동기 대기
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, let parentVC = self.controller else { return }
+            
+            parentVC.view.setNeedsLayout()
+            parentVC.view.layoutIfNeeded()
+            
+            self.shadowHiddenCheck()
+            
+            self.delegate?.containerControllerRotation?(self)
+            
+            // 부모 뷰의 최신 Frame/Safe Area 기준으로 바텀시트 위치 및 너비 재계산
+            self.calculationView()
+            self.calculationScrollViewHeight(from: .rotation)
+            
+            self.move(type: self.moveType, from: .rotation, shadowCheck: false)
+        }
     }
     
     // MARK: - Update Layout
