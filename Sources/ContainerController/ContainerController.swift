@@ -186,6 +186,8 @@ open class ContainerController: NSObject {
         }
     }
     
+    private var lastDeviceOrientation: UIDeviceOrientation = .unknown
+    
     // MARK: - Init
     
     /// ContainerController 초기화
@@ -241,9 +243,14 @@ open class ContainerController: NSObject {
         
         guard isRotateAllowed else { return }
         
-        if !UIDevice.current.orientation.isRotateAllowed { return }
+        let currentOrientation = UIDevice.current.orientation
         
-        if ContainerDevice.orientation == oldOrientation { return }
+        // 1. 유효한 방향(Portrait, LandscapeLeft, LandscapeRight, Pad의 UpsideDown 등) 체크
+        guard currentOrientation.isRotateAllowed else { return }
+        
+        // 2. ContainerDevice.orientation 대신 UIDevice.current.orientation으로 직접 비교
+        if currentOrientation == lastDeviceOrientation { return }
+        lastDeviceOrientation = currentOrientation
         oldOrientation = ContainerDevice.orientation
         
         shadowHiddenCheck()
