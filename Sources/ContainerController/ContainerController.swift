@@ -253,7 +253,7 @@ open class ContainerController: NSObject {
         calculationView()
         calculationScrollViewHeight(from: .rotation)
         
-        move(type: moveType, from: .rotation)
+        move(type: moveType, from: .rotation, shadowCheck: false)
     }
     
     // MARK: - Update Layout
