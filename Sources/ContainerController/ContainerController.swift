@@ -188,6 +188,9 @@ open class ContainerController: NSObject {
     
     private var lastDeviceOrientation: UIDeviceOrientation = .unknown
     
+    // 💡 최대 가로 폭 프로퍼티 추가 (기본값 nil)
+    public var maxWidth: CGFloat? = nil
+    
     // MARK: - Init
     
     /// ContainerController 초기화
@@ -573,9 +576,20 @@ open class ContainerController: NSObject {
     private func calculationView() {
         guard let view = view else { return }
         
-        let x: CGFloat = insetsLeft
-        let width: CGFloat = (deviceWidth - insetsRight - insetsLeft)
+        // 💡 1. 부모 View의 실제 Bounds 너비 (없으면 deviceWidth)
+        let parentWidth = controller?.view.bounds.width ?? deviceWidth
         
+        // 💡 2. 기본 인셋을 반영한 너비 계산
+        var width: CGFloat = parentWidth - insetsRight - insetsLeft
+        var x: CGFloat = insetsLeft
+        
+        // 💡 3. maxWidth가 설정되어 있고 부모 너비보다 작을 때 중앙 정렬 계산
+        if let maxWidth = maxWidth, parentWidth > maxWidth {
+            width = maxWidth
+            x = (parentWidth - width) / 2.0
+        }
+        
+        // 💡 4. 계산된 x, width 적용
         view.frame.origin.x = x
         view.frame.size.width = width
         view.frame.size.height = deviceHeight * 2
@@ -587,6 +601,7 @@ open class ContainerController: NSObject {
         }
         
         if let footerView = footerView {
+            // footerView도 containerView의 x 위치에 맞춰 동일하게 배치
             footerView.frame.origin.x = x
             footerView.frame.size.width = width
             changeFooterView()
@@ -1443,4 +1458,12 @@ extension ContainerController: UIScrollViewDelegate {
         }
     }
     
+}
+
+extension ContainerController {
+    /// ContainerView의 최대 가로 폭(MaxWidth)을 설정하고 중앙 정렬합니다.
+    public func set(maxWidth: CGFloat) {
+        self.maxWidth = maxWidth
+        self.calculationView()
+    }
 }
