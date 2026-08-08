@@ -82,7 +82,11 @@ open class ContainerController: NSObject {
     }
     
     private var isPortrait: Bool {
-        return ContainerDevice.isPortrait
+        if isOnlyPortrait {
+            return isOnlyPortrait
+        } else {
+            return ContainerDevice.isPortrait
+        }
     }
     
     private var deviceHeight: CGFloat {
@@ -104,6 +108,18 @@ open class ContainerController: NSObject {
             width = ContainerDevice.screenMax
         }
         return width
+    }
+    
+    // MARK: - Rotate & Orientation Control
+    
+    /// 화면 회전 이벤트 감지 및 수락 여부
+    public var isRotateAllowed: Bool = false
+    
+    /// 세로 모드 고정 여부. 값 변경 시 뷰 레이아웃을 다시 계산합니다.
+    public var isOnlyPortrait: Bool = true {
+        didSet {
+            calculationViews()
+        }
     }
     
     // MARK: - Positions Move
@@ -172,10 +188,22 @@ open class ContainerController: NSObject {
     
     // MARK: - Init
     
-    public init(addTo controller: UIViewController, layout: ContainerLayout) {
+    /// ContainerController 초기화
+    /// - Parameters:
+    ///   - controller: 부모 UIViewController
+    ///   - layout: ContainerLayout
+    ///   - isOnlyPortrait: 세로 좌표계 고정 여부 (기본값: true - 기존 폰 동작 보장)
+    ///   - isRotateAllowed: 회전 이벤트 수락 및 레이아웃 갱신 여부 (기본값: false)
+    public init(addTo controller: UIViewController,
+                layout: ContainerLayout,
+                isOnlyPortrait: Bool = true,
+                isRotateAllowed: Bool = false) {
         super.init()
         
         self.controller = controller
+        self.isOnlyPortrait = isOnlyPortrait
+        self.isRotateAllowed = isRotateAllowed
+        
         set(layout: layout)
         
         NotificationCenter.default.addObserver(self, selector: #selector(rotated), name: UIDevice.orientationDidChangeNotification, object: nil)
@@ -211,6 +239,8 @@ open class ContainerController: NSObject {
     
     @objc func rotated() {
         
+        guard isRotateAllowed else { return }
+        
         if !UIDevice.current.orientation.isRotateAllowed { return }
         
         if ContainerDevice.orientation == oldOrientation { return }
@@ -239,6 +269,14 @@ open class ContainerController: NSObject {
         layout.movingEnabled = movingEnabled
         scrollView?.isScrollEnabled = movingEnabled
         panGesture?.isEnabled = movingEnabled
+    }
+    
+    public func set(bottomSpringEnable: Bool) {
+        layout.bottomSpringEnable = bottomSpringEnable
+    }
+    
+    public func set(bottomBounceEnable: Bool) {
+        layout.bottomBounceEnable = bottomBounceEnable
     }
     
     public func set(trackingPosition: Bool) {
@@ -485,6 +523,11 @@ open class ContainerController: NSObject {
             let type: ContainerMoveType = moveType
             let from: ContainerFromType = .pan
             let animation = false
+            
+            if !layout.bottomBounceEnable, position > positionBottom {
+                transform.ty = positionBottom
+                position = positionBottom
+            }
             
             changeView(transform: transform)
             shadowLevelAlpha(position: position, animation: false)
@@ -741,6 +784,7 @@ open class ContainerController: NSObject {
                      animation: Bool = true,
                      velocity: CGFloat = 0.0,
                      from: ContainerFromType = .custom,
+                     shadowCheck: Bool = true,
                      completion: (() -> Void)? = nil) {
         
         var position = positionMoveFrom(type: type)
@@ -753,6 +797,7 @@ open class ContainerController: NSObject {
              type: type,
              velocity: velocity,
              from: from,
+             shadowCheck: shadowCheck,
              completion: completion)
     }
     
@@ -780,6 +825,7 @@ open class ContainerController: NSObject {
                      type: ContainerMoveType,
                      velocity: CGFloat = 0.0,
                      from: ContainerFromType,
+                     shadowCheck: Bool = true,
                      completion: (() -> Void)? = nil) {
         
         if layout.movingEnabled {
@@ -794,7 +840,9 @@ open class ContainerController: NSObject {
         let oldMove = moveType
         moveType = type
         
-        shadowLevelAlpha(position: position, animation: true)
+        if shadowCheck {
+            shadowLevelAlpha(position: position, animation: true)
+        }
         
         let transform = CGAffineTransform(translationX: 0, y: position)
         
@@ -1082,20 +1130,33 @@ open class ContainerController: NSObject {
             displayLink?.add(to: .main, forMode: .default)
         }
         
-        UIView.animate( withDuration: TimeInterval(duration),
-                        delay: 0.0,
-                        usingSpringWithDamping: damping,
-                        initialSpringVelocity: velocity,
-                        options: [ .allowUserInteraction ],
-                        animations: animation,
-                        completion: { _ in
-                            
-                            if let displayLink = displayLink {
-                                displayLink.invalidate()
-                            }
-                            completion?()
-        })
-        
+        if layout.bottomSpringEnable {
+            UIView.animate( withDuration: TimeInterval(duration),
+                            delay: 0.0,
+                            usingSpringWithDamping: damping,
+                            initialSpringVelocity: velocity,
+                            options: [ .allowUserInteraction ],
+                            animations: animation,
+                            completion: { _ in
+                                
+                                if let displayLink = displayLink {
+                                    displayLink.invalidate()
+                                }
+                                completion?()
+            })
+        } else {
+            UIView.animate( withDuration: TimeInterval(0.2),
+                            delay: 0.0,
+                            options: [ .curveEaseOut ],
+                            animations: animation,
+                            completion: { _ in
+                                
+                                if let displayLink = displayLink {
+                                    displayLink.invalidate()
+                                }
+                                completion?()
+            })
+        }
     }
 }
 
@@ -1260,6 +1321,8 @@ extension ContainerController: UIScrollViewDelegate {
             
             if scrollTransform.ty < top {
                 scrollTransform.ty = top
+            } else if !layout.bottomBounceEnable, scrollTransform.ty > positionBottom {
+                scrollTransform.ty = positionBottom
             }
             
             if scrollBegin {
@@ -1308,6 +1371,8 @@ extension ContainerController: UIScrollViewDelegate {
                     
                     if scrollTransform.ty < top {
                         scrollTransform.ty = top
+                    } else if !layout.bottomBounceEnable, scrollTransform.ty > positionBottom {
+                        scrollTransform.ty = positionBottom
                     }
                     
                     let position = scrollTransform.ty
