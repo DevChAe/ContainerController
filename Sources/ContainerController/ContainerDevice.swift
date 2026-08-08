@@ -124,7 +124,18 @@ open class ContainerDevice {
 public extension UIDeviceOrientation {
     
     var isRotateAllowed: Bool {
-        return !(face || self == .portraitUpsideDown)
+        // FaceUp, FaceDown, Unknown 등 센서 노이즈 무시
+        if face || self == .unknown {
+            return false
+        }
+        
+        // iPhone인 경우 PortraitUpsideDown은 회전에서 제외
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            return self != .portraitUpsideDown
+        }
+        
+        // iPad 등 타 기기에서는 모든 방향(PortraitUpsideDown 포함) 허용
+        return true
     }
     
     var face: Bool {
